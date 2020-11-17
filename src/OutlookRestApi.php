@@ -33,11 +33,6 @@ class OutlookRestApi
 		return $this;
 	}
 
-	public function test()
-	{
-
-	}
-
 	public function clearResponse()
 	{
 		$this->response = null;
