@@ -23,22 +23,19 @@ class OutlookRestApi
         $tokenType = null,
         $url = null;
 
-	public function __construct() 
+	public function __construct($email) 
 	{
 		$this->authUrl = env('OUTLOOK_REST_AUTHURL');
 		$this->clientId = env('OUTLOOK_REST_LOGIN');
 		$this->clientSecret = env('OUTLOOK_REST_PASSWORD');
-		$this->url = env('OUTLOOK_REST_URL');
+		$this->url = env('OUTLOOK_REST_URL').$email.'/';
 
 		return $this;
 	}
 
 	public function test()
 	{
-		
 
-
-		return $this;
 	}
 
 	public function clearResponse()
@@ -87,21 +84,21 @@ class OutlookRestApi
 
 	protected function createRequest($method = 'GET') 
 	{
-		$this->ch = curl_init();
-
 		if (!$this->token) {
 			$this->createAccessToken();
 		}
 
-		curl_setopt($this->ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json', 'Authorization: '.$this->tokenType.' '.$this->token]);
+		$this->ch = curl_init();
 
+		curl_setopt($this->ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json', 'Authorization: '.$this->tokenType.' '.$this->token]);
 		curl_setopt($this->ch, CURLOPT_URL, $this->url.$this->endpoint.$this->getRequestString());
 		curl_setopt($this->ch, CURLOPT_RETURNTRANSFER, 1);
 
 		if (strtoupper($method) === 'POST') {
 			curl_setopt($this->ch, CURLOPT_POST, true);
-		} else
+		} else {
 			curl_setopt($this->ch, CURLOPT_CUSTOMREQUEST, $method);
+		}
 
 		return $this;
 	}
@@ -134,6 +131,14 @@ class OutlookRestApi
     	}
 
     	return $this->response;
+    }
+
+    public function getTasks()
+    {
+		$this->newCall()->endpoint = 'tasks';
+		$this->responseKey = 'value';
+
+		return $this->getResponse();
     }
 
 	protected function newCall() {
@@ -190,5 +195,11 @@ class OutlookRestApi
     	$this->responseRaw = isset($this->responseKey) ? $response->{$this->responseKey} : $response;
 
 		return $this;
+    }
+
+    public function setUser($email) {
+    	$this->url = env('OUTLOOK_REST_URL').$email.'/';
+
+    	return $this;
     }
 }
