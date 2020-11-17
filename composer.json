@@ -1,0 +1,26 @@
+{
+    "name": "supsign/laravel-outlook-rest",
+    "description": "Laravel Extension for Handling API for Outlook exchange",
+    "keywords": ["composer", "script", "myFactory"],
+    "license": "MIT",
+    "authors": [
+    {
+        "name": "Florian Ratz",
+        "email": "florian.ratz@supsign.ch"
+    }],
+    "autoload": {
+        "psr-4": {
+            "Supsign\\LaravelOutlookRest\\": "src/"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Supsign\\LaravelOutlookRest\\LaravelOutlookRestServiceProvider"
+            ],
+            "aliases": {
+                "OutlookRestApi": "Supsign\\LaravelOutlookRest\\OutlookRestApi"
+            }
+        }
+    }
+}
