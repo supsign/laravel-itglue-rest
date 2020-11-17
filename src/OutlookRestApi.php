@@ -8,7 +8,10 @@ use Exception;
 class OutlookRestApi
 {
     protected
+    	$authUrl = null,
     	$ch = null,
+    	$clientId = null,
+    	$clientSecret = null,
         $endpoint = '',
         $endpoints = array(),
         $request = array(),
@@ -16,10 +19,25 @@ class OutlookRestApi
         $responseKey = null,
         $responseRaw = array(),
         $step = 100,
+        $token = null,
+        $tokenType = null,
         $url = null;
 
 	public function __construct() 
 	{
+		$this->authUrl = env('OUTLOOK_REST_AUTHURL');
+		$this->clientId = env('OUTLOOK_REST_LOGIN');
+		$this->clientSecret = env('OUTLOOK_REST_PASSWORD');
+		$this->url = env('OUTLOOK_REST_URL');
+
+		return $this;
+	}
+
+	public function test()
+	{
+		
+
+
 		return $this;
 	}
 
@@ -41,14 +59,41 @@ class OutlookRestApi
 		return $this;
 	}
 
+	protected function createAccessToken() {
+		$this->ch = curl_init();
+
+		curl_setopt($this->ch, CURLOPT_URL, $this->authUrl);
+		curl_setopt($this->ch, CURLOPT_POST, true);
+		curl_setopt($this->ch, CURLOPT_RETURNTRANSFER, 1);
+		curl_setopt($this->ch, CURLOPT_HEADER, false);
+		curl_setopt($this->ch, CURLOPT_SSL_VERIFYPEER, false);
+		curl_setopt($this->ch, CURLOPT_SSLVERSION, 6);
+		curl_setopt($this->ch, CURLOPT_USERPWD, $this->clientId.':'.$this->clientSecret);
+		curl_setopt($this->ch, CURLOPT_POSTFIELDS, "grant_type=client_credentials&scope=https://outlook.office.com/.default");
+
+		$authResponse = json_decode(curl_exec($this->ch) );
+
+		curl_close($this->ch);
+
+		if (isset($authResponse->error)) {
+			throw new Exception($authResponse->error_description, 1);
+		}
+
+		$this->token = $authResponse->access_token;
+		$this->tokenType = $authResponse->token_type;
+		
+		return $this;
+	}
+
 	protected function createRequest($method = 'GET') 
 	{
 		$this->ch = curl_init();
 
-		if ($this->endpoint) {
-			curl_setopt($this->ch, CURLOPT_HTTPAUTH, CURLAUTH_BASIC);
-			curl_setopt($this->ch, CURLOPT_USERPWD, $this->login.':'.$this->password);
+		if (!$this->token) {
+			$this->createAccessToken();
 		}
+
+		curl_setopt($this->ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json', 'Authorization: '.$this->tokenType.' '.$this->token]);
 
 		curl_setopt($this->ch, CURLOPT_URL, $this->url.$this->endpoint.$this->getRequestString());
 		curl_setopt($this->ch, CURLOPT_RETURNTRANSFER, 1);
