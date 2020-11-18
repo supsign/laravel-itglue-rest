@@ -18,7 +18,7 @@ class OutlookRestApi
         $response = null,
         $responseKey = null,
         $responseRaw = array(),
-        $step = 100,
+        $step = 10,
         $token = null,
         $tokenType = null,
         $url = null;
@@ -157,10 +157,10 @@ class OutlookRestApi
     	do {
     		$this->sendRequest();
 
-			if (!isset($this->request['startAt'])) {
-				$this->request['startAt'] = $this->step;
+			if (!isset($this->request['skip'])) {
+				$this->request['skip'] = $this->step;
 			} else {
-				$this->request['startAt'] += $this->step;
+				$this->request['skip'] += $this->step;
 			}
     	} while (!$this->requestFinished);
 
@@ -186,8 +186,8 @@ class OutlookRestApi
 
     protected function setResponse($response) 
     {
-    	$this->requestFinished = true;
-    	$this->responseRaw = isset($this->responseKey) ? $response->{$this->responseKey} : $response;
+    	$this->requestFinished = !isset($response->{'@odata.nextLink'});
+    	$this->responseRaw = array_merge($this->responseRaw, isset($this->responseKey) ? $response->{$this->responseKey} : $response);
 
 		return $this;
     }
