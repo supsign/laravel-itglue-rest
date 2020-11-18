@@ -128,6 +128,13 @@ class OutlookRestApi
     	return $this->response;
     }
 
+    public function getTask($id)
+    {
+		$this->newCall()->endpoint = 'tasks(\''.$id.'\')';
+
+		return $this->getResponse();
+    }
+
     public function getTasks()
     {
 		$this->newCall()->endpoint = 'tasks';
@@ -187,7 +194,14 @@ class OutlookRestApi
     protected function setResponse($response) 
     {
     	$this->requestFinished = !isset($response->{'@odata.nextLink'});
-    	$this->responseRaw = array_merge($this->responseRaw, isset($this->responseKey) ? $response->{$this->responseKey} : $response);
+
+		$data = isset($this->responseKey) ? $response->{$this->responseKey} : $response;
+
+		if (is_array($data)) {
+    		$this->responseRaw = array_merge($this->responseRaw, $data);
+		} else {
+    		$this->responseRaw = $data;
+    	}
 
 		return $this;
     }
