@@ -2,47 +2,34 @@
 
 namespace Supsign\LaravelItglueRest;
 
+use CurlHandle;
 use Config;
 use Exception;
+use stdClass;
 
 class ItglueRestApi
 {
-    protected
-    	$authUrl = null,
-    	$ch = null,
-    	$clientId = null,
-    	$clientSecret = null,
-        $endpoint = '',
-        $endpoints = array(),
-        $request = array(),
-        $response = null,
-        $responseKey = null,
-        $responseRaw = array(),
-        $step = 10,
-        $token = null,
-        $tokenType = null,
-        $url = null;
+	protected ?CurlHandle $ch = null;
+	protected ?string $endpoint = null;
+	protected array $request = [];
+	protected ?stdClass $response = null;
+    protected ?string $token = null;
+    protected ?string $url = null;
 
-	public function __construct($email) 
+	public function __construct()
 	{
-		$this->authUrl = env('ITGLUE_REST_AUTHURL');
-		$this->clientId = env('ITGLUE_REST_LOGIN');
-		$this->clientSecret = env('ITGLUE_REST_PASSWORD');
-		$this->url = env('ITGLUE_REST_URL').$email.'/';
-
-		return $this;
+		$this->token = env('ITGLUE_REST_TOKEN');
+		$this->url = env('ITGLUE_REST_URL');
 	}
 
-	public function clearResponse()
+	public function clearResponse(): self
 	{
 		$this->response = null;
-		$this->responseRaw = array();
-		$this->responseKey = null;
 
 		return $this;
 	}
 
-	protected function clearRequestData() 
+	protected function clearRequestData(): self
 	{
 		foreach ($this->request AS $key => $value) {
 			unset($this->request[$key]);
@@ -51,43 +38,14 @@ class ItglueRestApi
 		return $this;
 	}
 
-	protected function createAccessToken() {
-		$this->ch = curl_init();
-
-		curl_setopt($this->ch, CURLOPT_URL, $this->authUrl);
-		curl_setopt($this->ch, CURLOPT_POST, true);
-		curl_setopt($this->ch, CURLOPT_RETURNTRANSFER, 1);
-		curl_setopt($this->ch, CURLOPT_HEADER, false);
-		curl_setopt($this->ch, CURLOPT_SSL_VERIFYPEER, false);
-		curl_setopt($this->ch, CURLOPT_SSLVERSION, 6);
-		curl_setopt($this->ch, CURLOPT_USERPWD, $this->clientId.':'.$this->clientSecret);
-		curl_setopt($this->ch, CURLOPT_POSTFIELDS, "grant_type=client_credentials&scope=https://outlook.office.com/.default");
-
-		$authResponse = json_decode(curl_exec($this->ch) );
-
-		curl_close($this->ch);
-
-		if (isset($authResponse->error)) {
-			throw new Exception($authResponse->error_description, 1);
-		}
-
-		$this->token = $authResponse->access_token;
-		$this->tokenType = $authResponse->token_type;
-		
-		return $this;
-	}
-
-	protected function createRequest($method = 'GET') 
+	protected function createRequest($method = 'GET'): self
 	{
-		if (!$this->token) {
-			$this->createAccessToken();
-		}
-
 		$this->ch = curl_init();
 
-		curl_setopt($this->ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json', 'Authorization: '.$this->tokenType.' '.$this->token]);
+		curl_setopt($this->ch, CURLOPT_HTTPHEADER, ['Content-Type: application/vnd.api+json', 'x-api-key: '.$this->token]);
 		curl_setopt($this->ch, CURLOPT_URL, $this->url.$this->endpoint.$this->getRequestString());
 		curl_setopt($this->ch, CURLOPT_RETURNTRANSFER, 1);
+		curl_setopt($this->ch, CURLOPT_SSL_VERIFYPEER, 0);
 
 		if (strtoupper($method) === 'POST') {
 			curl_setopt($this->ch, CURLOPT_POST, true);
@@ -98,11 +56,15 @@ class ItglueRestApi
 		return $this;
 	}
 
-	public function getEndpoint() {
-		return $this->endpoint;
+	public function getOrganizations(): array
+	{
+		return $this
+			->newCall()
+			->setEndpoint('organizations')
+			->getResponse();
 	}
 
-	protected function getRequestString()
+	protected function getRequestString(): string
 	{
 		if (!$this->request) {
 			return '';
@@ -115,100 +77,48 @@ class ItglueRestApi
 		return '?'.implode('&', $pairs);
 	}
 
-    public function getResponse() 
+	protected function newCall(): self
+	{
+		return $this
+			->clearRequestData()
+			->clearResponse();
+	}
+
+    public function getResponse(): array|stdClass
     {
     	if (!$this->endpoint) {
     		throw new Exception('no endpoint specified', 1);
     	}
 
     	if (!$this->response) {
-    		$this->sendRequests();
+    		$this->sendRequest();
+    	}
+
+    	if (isset($this->response->data)) {
+    		return $this->response->data;
     	}
 
     	return $this->response;
     }
 
-    public function getTask($id)
-    {
-		$this->newCall()->endpoint = 'tasks(\''.$id.'\')';
-
-		return $this->getResponse();
-    }
-
-    public function getTasks()
-    {
-		$this->newCall()->endpoint = 'tasks';
-		$this->responseKey = 'value';
-
-		return $this->getResponse();
-    }
-
-	protected function newCall() {
-		return $this
-			->clearRequestData()
-			->clearResponse();
-	}
-
-
-	protected function sendRequest()
+	protected function sendRequest(): self
 	{
 		$this->createRequest();
-		$this->setResponse(json_decode(curl_exec($this->ch)));
+		$this->response = json_decode(curl_exec($this->ch));
 		curl_close($this->ch);
 
 		return $this;
 	}
 
-    protected function sendRequests()
-    {
-    	do {
-    		$this->sendRequest();
-
-			if (!isset($this->request['skip'])) {
-				$this->request['skip'] = $this->step;
-			} else {
-				$this->request['skip'] += $this->step;
-			}
-    	} while (!$this->requestFinished);
-
-    	$this->response = $this->responseRaw;
-
-    	return $this;
-    }
-
-	public function setEndpoint($endpoint) {
+	public function setEndpoint($endpoint): self
+	{
 		$this->endpoint = $endpoint;
 
 		return $this;
 	}
 
-    protected function setRequestData(array $data)
-    {
-    	$this
-    		->clearRequestData()
-    		->request = $data;
-
-    	return $this;
-    }
-
-    protected function setResponse($response) 
-    {
-    	$this->requestFinished = !isset($response->{'@odata.nextLink'});
-
-		$data = isset($this->responseKey) ? $response->{$this->responseKey} : $response;
-
-		if (is_array($data)) {
-    		$this->responseRaw = array_merge($this->responseRaw, $data);
-		} else {
-    		$this->responseRaw = $data;
-    	}
-
-		return $this;
-    }
-
-    public function setUser($email) {
-    	$this->url = env('OUTLOOK_REST_URL').$email.'/';
-
-    	return $this;
-    }
+	public function test()
+	{
+		return $this->getOrganizations();
+	}
 }
