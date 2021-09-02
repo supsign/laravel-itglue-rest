@@ -1,10 +1,10 @@
 <?php
 
-namespace Supsign\LaravelOutlookRest;
+namespace Supsign\LaravelItglueRest;
 
 use Illuminate\Support\ServiceProvider;
 
-class LaravelOutlookRestServiceProvider extends ServiceProvider
+class LaravelItglueRestServiceProvider extends ServiceProvider
 {
 
     public function boot() 

@@ -1,11 +1,11 @@
 <?php
 
-namespace Supsign\LaravelOutlookRest;
+namespace Supsign\LaravelItglueRest;
 
 use Config;
 use Exception;
 
-class OutlookRestApi
+class ItglueRestApi
 {
     protected
     	$authUrl = null,
@@ -25,10 +25,10 @@ class OutlookRestApi
 
 	public function __construct($email) 
 	{
-		$this->authUrl = env('OUTLOOK_REST_AUTHURL');
-		$this->clientId = env('OUTLOOK_REST_LOGIN');
-		$this->clientSecret = env('OUTLOOK_REST_PASSWORD');
-		$this->url = env('OUTLOOK_REST_URL').$email.'/';
+		$this->authUrl = env('ITGLUE_REST_AUTHURL');
+		$this->clientId = env('ITGLUE_REST_LOGIN');
+		$this->clientSecret = env('ITGLUE_REST_PASSWORD');
+		$this->url = env('ITGLUE_REST_URL').$email.'/';
 
 		return $this;
 	}
