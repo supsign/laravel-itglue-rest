@@ -1,7 +1,7 @@
 {
-    "name": "supsign/laravel-outlook-rest",
-    "description": "Laravel Extension for Handling API for Outlook exchange",
-    "keywords": ["composer", "script", "myFactory"],
+    "name": "supsign/laravel-itglue-rest",
+    "description": "Laravel Extension for Handling API for IT Glue",
+    "keywords": ["composer", "script"],
     "license": "MIT",
     "authors": [
     {
@@ -10,16 +10,16 @@
     }],
     "autoload": {
         "psr-4": {
-            "Supsign\\LaravelOutlookRest\\": "src/"
+            "Supsign\\LaravelItglueRest\\": "src/"
         }
     },
     "extra": {
         "laravel": {
             "providers": [
-                "Supsign\\LaravelOutlookRest\\LaravelOutlookRestServiceProvider"
+                "Supsign\\LaravelItglueRest\\LaravelItglueRestServiceProvider"
             ],
             "aliases": {
-                "OutlookRestApi": "Supsign\\LaravelOutlookRest\\OutlookRestApi"
+                "ItglueRestApi": "Supsign\\LaravelItglueRest\\ItglueRestApi"
             }
         }
     }
