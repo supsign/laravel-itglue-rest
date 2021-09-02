@@ -10,9 +10,11 @@ use stdClass;
 class ItglueRestApi
 {
 	protected ?CurlHandle $ch = null;
-	protected ?string $endpoint = null;
-	protected array $request = [];
-	protected ?stdClass $response = null;
+	protected string $endpoint = '';
+	protected int|string $endpointId = '';
+	protected array|stdClass $response = [];
+	protected array|stdClass $request = [];
+	protected string $requestType = '';
     protected ?string $token = null;
     protected ?string $url = null;
 
@@ -22,38 +24,54 @@ class ItglueRestApi
 		$this->url = env('ITGLUE_REST_URL');
 	}
 
+	public function clearEndpoint(): self
+	{
+		return $this->setEndpoint('');
+	}
+
 	public function clearResponse(): self
 	{
-		$this->response = null;
+		$this->response = [];
 
 		return $this;
 	}
 
 	protected function clearRequestData(): self
 	{
-		foreach ($this->request AS $key => $value) {
-			unset($this->request[$key]);
+		$this->request = [];
+
+		return $this;
+	}
+
+	protected function createRequest(): self
+	{
+		$this->ch = curl_init();
+
+		curl_setopt($this->ch, CURLOPT_HTTPHEADER, ['Content-Type: application/vnd.api+json', 'x-api-key: '.$this->token]);
+		curl_setopt($this->ch, CURLOPT_URL, $this->url.$this->getEndpoint());
+		curl_setopt($this->ch, CURLOPT_RETURNTRANSFER, 1);
+		curl_setopt($this->ch, CURLOPT_SSL_VERIFYPEER, 0);
+
+		if (strtoupper($this->requestType) === 'POST') {
+			curl_setopt($this->ch, CURLOPT_POST, true);
+		} else {
+			curl_setopt($this->ch, CURLOPT_CUSTOMREQUEST, $this->requestType);
+		}
+
+		if (!empty($this->request)) {
+			curl_setopt($this->ch, CURLOPT_POSTFIELDS, $this->getRequestJson()); 
 		}
 
 		return $this;
 	}
 
-	protected function createRequest($method = 'GET'): self
+	protected function getEndpoint()
 	{
-		$this->ch = curl_init();
-
-		curl_setopt($this->ch, CURLOPT_HTTPHEADER, ['Content-Type: application/vnd.api+json', 'x-api-key: '.$this->token]);
-		curl_setopt($this->ch, CURLOPT_URL, $this->url.$this->endpoint.$this->getRequestString());
-		curl_setopt($this->ch, CURLOPT_RETURNTRANSFER, 1);
-		curl_setopt($this->ch, CURLOPT_SSL_VERIFYPEER, 0);
-
-		if (strtoupper($method) === 'POST') {
-			curl_setopt($this->ch, CURLOPT_POST, true);
-		} else {
-			curl_setopt($this->ch, CURLOPT_CUSTOMREQUEST, $method);
+		if ($this->endpointId) {
+			return $this->endpoint.'/'.$this->endpointId;
 		}
 
-		return $this;
+		return $this->endpoint;
 	}
 
 	public function getOrganizations(): array
@@ -64,24 +82,22 @@ class ItglueRestApi
 			->getResponse();
 	}
 
-	protected function getRequestString(): string
+	protected function getRequestJson(): string
 	{
 		if (!$this->request) {
 			return '';
 		}
 
+		$request = ['data' => [
+			'type' => $this->endpoint,
+			'attributes' => []
+		]];
+
 		foreach ($this->request AS $key => $value) {
-			$pairs[] = implode('=', [$key, $value]);
+			$request['data']['attributes'][$key] = $value;
 		}
 
-		return '?'.implode('&', $pairs);
-	}
-
-	protected function newCall(): self
-	{
-		return $this
-			->clearRequestData()
-			->clearResponse();
+		return json_encode($request);
 	}
 
     public function getResponse(): array|stdClass
@@ -101,6 +117,24 @@ class ItglueRestApi
     	return $this->response;
     }
 
+	protected function newCall($method = 'GET'): self
+	{
+		return $this
+			->clearEndpoint()
+			->clearRequestData()
+			->clearResponse()
+			->setRequestType($method);
+	}
+
+	public function patchOrganizations(int $id, array $data): array|stdClass
+	{
+		return $this
+			->newCall('PATCH')
+			->setEndpoint('organizations', $id)
+			->setRequestData($data)
+			->getResponse();
+	}
+
 	protected function sendRequest(): self
 	{
 		$this->createRequest();
@@ -110,15 +144,27 @@ class ItglueRestApi
 		return $this;
 	}
 
-	public function setEndpoint($endpoint): self
+	public function setEndpoint($endpoint, $id = ''): self
 	{
 		$this->endpoint = $endpoint;
+		$this->endpointId = $id;
 
 		return $this;
 	}
 
-	public function test()
+    protected function setRequestData(array $data): self
+    {
+    	$this
+    		->clearRequestData()
+    		->request = $data;
+
+    	return $this;
+    }
+
+	public function setRequestType($requestType): self
 	{
-		return $this->getOrganizations();
+		$this->requestType = $requestType;
+
+		return $this;
 	}
 }
