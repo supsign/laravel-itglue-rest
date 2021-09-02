@@ -43,6 +43,15 @@ class ItglueRestApi
 		return $this;
 	}
 
+	public function createOrganizations(array $data)
+	{
+		return $this
+			->newCall('POST')
+			->setEndpoint('organizations')
+			->setRequestData($data)
+			->getResponse();
+	}
+
 	protected function createRequest(): self
 	{
 		$this->ch = curl_init();
@@ -64,6 +73,11 @@ class ItglueRestApi
 
 		return $this;
 	}
+
+	// public function deleteOrganizations(array $ids)
+	// {
+
+	// }
 
 	protected function getEndpoint()
 	{
