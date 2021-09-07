@@ -88,6 +88,14 @@ class ItglueRestApi
 		return $this->endpoint;
 	}
 
+	public function getOrganization(int $id)
+	{
+		return $this
+			->newCall()
+			->setEndpoint('organizations', $id)
+			->getResponse();
+	}
+
 	public function getOrganizations(): array
 	{
 		return $this
