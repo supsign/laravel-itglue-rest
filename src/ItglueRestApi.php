@@ -57,19 +57,31 @@ class ItglueRestApi
 		$this->ch = curl_init();
 
 		curl_setopt($this->ch, CURLOPT_HTTPHEADER, ['Content-Type: application/vnd.api+json', 'x-api-key: '.$this->token]);
-		curl_setopt($this->ch, CURLOPT_URL, $this->url.$this->getEndpoint());
-		curl_setopt($this->ch, CURLOPT_RETURNTRANSFER, 1);
-		curl_setopt($this->ch, CURLOPT_SSL_VERIFYPEER, 0);
 
-		if (strtoupper($this->requestType) === 'POST') {
-			curl_setopt($this->ch, CURLOPT_POST, true);
-		} else {
-			curl_setopt($this->ch, CURLOPT_CUSTOMREQUEST, $this->requestType);
+		$url = $this->url.$this->getEndpoint();
+
+		switch (strtoupper($this->requestType)) {
+			case 'GET':
+				$url .= $this->getRequestString();
+				$this->clearRequestData();
+				break;
+
+			case 'POST':
+				curl_setopt($this->ch, CURLOPT_POST, true);
+				break;
+
+			default:
+				curl_setopt($this->ch, CURLOPT_CUSTOMREQUEST, $this->requestType);				
+				break;
 		}
 
 		if (!empty($this->request)) {
 			curl_setopt($this->ch, CURLOPT_POSTFIELDS, $this->getRequestJson()); 
 		}
+
+		curl_setopt($this->ch, CURLOPT_URL, $url);
+		curl_setopt($this->ch, CURLOPT_RETURNTRANSFER, 1);
+		curl_setopt($this->ch, CURLOPT_SSL_VERIFYPEER, 0);
 
 		return $this;
 	}
@@ -88,7 +100,7 @@ class ItglueRestApi
 		return $this->endpoint;
 	}
 
-	public function getOrganization(int $id)
+	public function getOrganization(int $id): stdClass
 	{
 		return $this
 			->newCall()
@@ -96,11 +108,12 @@ class ItglueRestApi
 			->getResponse();
 	}
 
-	public function getOrganizations(): array
+	public function getOrganizations($filters = []): array
 	{
 		return $this
 			->newCall()
 			->setEndpoint('organizations')
+			->setRequestData($filters)
 			->getResponse();
 	}
 
@@ -120,6 +133,19 @@ class ItglueRestApi
 		}
 
 		return json_encode($request);
+	}
+
+	protected function getRequestString(): string
+	{
+		if (!$this->request) {
+			return '';
+		}
+
+		foreach ($this->request AS $key => $value) {
+			$pairs[] = implode('=', [$key, urlencode($value)]);
+		}
+
+		return '?'.implode('&', $pairs);
 	}
 
     public function getResponse(): array|stdClass
